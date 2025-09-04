@@ -1,0 +1,149 @@
+---
+title: "Progress Memo 1"
+subtitle: |
+  | Final Project 
+  | Data Science 2 with R (STAT 301-2)
+author: "Louise Oh"
+date: today
+
+format:
+  html:
+    toc: true
+    embed-resources: true
+    
+execute:
+  echo: false
+  warning: false
+  message: false
+
+from: markdown+emoji 
+reference-location: margin
+citation-location: margin
+---
+
+::: {.callout-tip icon=false}
+## Github Repo Link
+
+[https://github.com/stat301-2-2024-winter/final-project-2-louiseoh2025.git](https://github.com/stat301-2-2024-winter/final-project-2-louiseoh2025.git)
+
+:::
+
+
+## Dataset
+
+The COVID-19 pandemic was a substantial stressor, especially for pregnant individuals. The Mental Health In Pregnancy During COVID-19 Dataset^[Mental Health In Pregnancy During COVID-19 --- [https://www.kaggle.com/datasets/yeganehbavafa/mental-health-in-the-pregnancy-during-the-covid-19](https://www.kaggle.com/datasets/yeganehbavafa/mental-health-in-the-pregnancy-during-the-covid-19)] is aimed to understand the impact of COVID-19-related stresses on pregnant individuals and their infants and collected survey-based data across Canada as part of the Pregnancy during the COVID-19 Pandemic (PdP) project. This survey-based data allows for insights that can inform targeted interventions and support strategies to address the impact of COVID-19-related stresses on maternal and infant health.
+
+
+## Potential Prediction Problem 1
+
+::: {.callout-note icon="false"}
+## Prediction Research Objective 1
+
+The goal is classification, specifically what method of delivery (vaginal or c-section) mothers are likely to go through based on her demographic, socioeconomic, psychological, and other factors in pregnancy during a pandemic.
+
+:::
+
+Developing a prediction model to determine the appropriate `delivery_mode` for mothers during pregnancy amid a pandemic holds significant relevance and potential impact on maternal healthcare. Such a model could serve as a valuable decision support tool for healthcare professionals, assisting them in tailoring delivery plans based on individualized factors such as demographics, socioeconomic status, and psychological well-being. The importance of optimizing delivery mode decisions is underscored by the potential health risks associated with pandemic conditions. This research not only addresses a critical aspect of maternal care during challenging times but also contributes to the broader field of personalized medicine in obstetrics. The endeavor is driven by a commitment to enhancing the well-being of both mothers and infants, ultimately aiming to improve healthcare outcomes in the context of unique pandemic-related stressors.
+
+## Potential Prediction Problem 2
+
+::: {.callout-note icon="false"}
+## Prediction Research Objective 2
+
+The goal is regression, specifically what the weight of the child at birth will be based on the mother's biological and psychological factors in pregnancy during a pandemic.
+
+:::
+
+Developing a regression model to predict the weight of a child at birth based on the mother's biological and psychological factors during a pandemic is a crucial endeavor with profound implications for maternal and infant health. Accurate estimation of birth weight is paramount in identifying potential risks and tailoring appropriate prenatal care interventions. In the context of a pandemic, where stressors and uncertainties may exacerbate health challenges, a predictive model for birth weight contributes to the early identification of high-risk pregnancies. This research not only addresses a fundamental aspect of perinatal care but also aligns with the broader goal of enhancing maternal and infant outcomes in the face of unique pandemic-related stressors. By providing healthcare professionals with a reliable tool for predicting birth weight, this research strives to optimize prenatal care strategies, ultimately promoting the health and well-being of both mothers and infants during challenging times.
+
+
+## Data Quality
+
+The raw data has 16 variables and 10772 observations. There are 6 character variables and 10 numeric variables. There is a large number of missing data in all variables except `OSF_ID` and `Language`. For variables with less number of missing values, missing values may be handled during making the recipes for my model. However, for the purpose of this progress memo and data check, data cleaning was performed where all observations with missing values were removed.
+
+```{r}
+#| label: load-data
+#| echo: false
+
+# load packages
+library(tidyverse)
+library(here)
+library(knitr)
+
+# raw data
+pregnancy_raw <- read_csv(here("data/pregnancy.csv"))
+# glimpse raw data
+skimr::skim(pregnancy_raw)
+```
+
+After removing all missing values, there are 5156 observations, one unique ID and 15 variables. There are 9 numerical variables (maternal_age, postnatal_depression, promis_anxiety, gestational_age, birth_length, birth_weight, threaten_life, threaten_baby_danger, threaten_baby_harm), 5 categorical variables (household_income, maternal_education, delivery_mode, nicu_stay, language), and one date variable (delivery_date). The dataset meets the minimum guidelines of sufficiently complex for this particular project even after the data cleaning. 
+
+```{r}
+#| label: cleaned-data
+#| echo: false
+
+# clean data
+load(here("data/pregnancy_clean.rda"))
+# glimpse clean data
+glimpse(pregnancy)
+```
+
+Here is the data codebook that shows the variables and their descriptions. 
+
+```{r}
+#| label: data-codebook
+#| echo: false
+
+# data codebook
+load(here("data/pregnancy_codebook.rda"))
+# variables
+kable(pregnancy_codebook)
+```
+
+A possible concern is that if a large number of observations are filtered out due to missingness issues, the dataset may be no longer original and the prediction outcome may potentially be misleading and distorted from its original intentions. If missing values are addressed using imputation in creating the recipe, challenges might arise, like bias, loss of variability, increased uncertainty, model overfitting, etc. Another way of addressing is excluding variables with large missing values when making the models, if feasible. However, this issue must be approached cautiously, and the limitations of the  data should be acknowledged in any subsequent analysis or interpretation.
+
+
+## Target Variable 1 Analysis
+
+The first target variable is `delivery_mode`. This is a categorical variable with two levels (vaginally and c-section). The bar plot below shows and unbalanced frequency between the vaginally and c-section levels There are more than twice the number of vaginal deliveries than the number of c-section deliveries. Stratified splitting must be used to get the same proportion of instances for each level in training and testing datasets.
+
+```{r}
+#| label: target-variable-1
+#| echo: false
+
+ggplot(pregnancy, aes(x = delivery_mode)) +
+  geom_bar(fill = "skyblue", color = "black") +
+  theme_minimal() +
+  labs(title = "Distribution of Delivery Mode",
+       x = "Delivery Mode",
+       y = NULL)
+```
+
+## Target Variable 2 Analysis
+
+The second target variable is `birth_weight`. This is a numerical variable in the form of double. The histogram below shows a unimodal distribution that is slightly skewed toward the left, but still nearly symmetric. The distribution looks nearly normal with outliers on both ends, but slightly more on the lower end, of the weight distribution. The original data has a distribution closer to a normal distribution compared to when it is transformed in some way. Thus, there likely will be no major issues with the data and no transformation necessary for fitting the models.
+
+```{r}
+#| label: target-variable-2
+#| echo: false
+
+ggplot(pregnancy, aes(x = birth_weight)) +
+  geom_histogram(fill = "skyblue", color = "black", bins = 35) +
+  theme_minimal() +
+  labs(title = "Distribution of Child's Weight at Birth",
+       x = "Birth Weight (g)",
+       y = NULL)
+```
+
+## Future Project Plans
+
+Here is a tentative timeline of the final project:
+
+- February 10: create the baseline/null model properly defined and fitted
+- February 20: create two additional models properly defined and fitted
+- February 25: submit data memo 2 
+- March 1: complete basic requirements for this project (2 recipes and 6 model types)
+- March 4: write a draft of the final project with more content added from March 1
+- March 5: write the executive summary and update github repo and README documents
+- March 6: proofread and submit final project
+

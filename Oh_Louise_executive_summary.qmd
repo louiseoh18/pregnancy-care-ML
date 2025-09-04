@@ -1,0 +1,97 @@
+---
+title: "Improving Pregnancy Care During the Pandemic"
+subtitle: |
+  | Executive Summary
+  | Data Science 2 with R (STAT 301-2)
+author: "Louise Oh"
+date: today
+
+format:
+  html:
+    toc: true
+    embed-resources: true
+    
+execute:
+  echo: false
+  warning: false
+  message: false
+
+from: markdown+emoji 
+reference-location: margin
+citation-location: margin
+---
+
+::: {.callout-tip icon=false}
+## Github Repo Link
+
+[https://github.com/stat301-2-2024-winter/final-project-2-louiseoh2025.git](https://github.com/stat301-2-2024-winter/final-project-2-louiseoh2025.git)
+
+:::
+
+```{r}
+#| label: load-everything
+#| echo: false
+
+# load packages
+library(here)
+
+# load analysis
+load(here("analysis/model_analysis_rmse.rda"))
+load(here("analysis/assess_final_fit.rda"))
+```
+
+
+## Purpose
+
+The Mental Health In Pregnancy During COVID-19 Dataset[^1] is aimed to understand the impact of COVID-19-related stresses on pregnant individuals and their infants and collected survey-based data across Canada as part of the Pregnancy during the COVID-19 Pandemic (PdP) project (Lebel et al., 2023)[^2]. 
+
+[^1]: Mental Health In Pregnancy During COVID-19 --- <https://www.kaggle.com/datasets/yeganehbavafa/mental-health-in-the-pregnancy-during-the-covid-19>
+
+[^2]: Lebel, C., Tomfohr-Madsen, L., Giesbrecht, G., Lai, B. P. Y., Bagshawe, M., Freeman, M., Hapin, M. K., MacKinnon, A., Patel, P., van Sloten, M., & van de Wouw, M. (2023). Prenatal mental health data and birth outcomes in the pregnancy during the COVID-19 Pandemic dataset. Data in brief, 49, 109366. --- <https://doi.org/10.1016/j.dib.2023.109366>
+
+::: {.callout-note icon="false"}
+## Prediction Objective 
+
+The goal is regression, specifically what the weight of the child at birth will be based on the mother's biological and psychological factors in pregnancy during a pandemic.
+
+:::
+
+Developing a regression model to predict baby's birth weight based on maternal and infant factors during a pandemic is crucial for early identification of high-risk pregnancies and tailoring appropriate prenatal care interventions. Amid pandemic-related stressors, such a predictive model aids healthcare professionals in optimizing pregnancy care strategies, thereby promoting maternal and infant health outcomes during challenging times. 
+
+
+## Model Selection
+
+The target variable is baby's weight at birth. The distribution of the variable is nearly normal thus all modeling and analyses were done in an original scale. A Null (baseline), Linear Regression, Lasso Regression, Ridge Regression, K Nearest Neighbor, Boosted Tree, and Random Forest models were fitted, and tuned if necessary, using a kitchen sink recipe (recipe 1) and a customized recipe (recipe 2). @tbl-analysis shows the comparison of Root Mean Squared Error across models, which revealed that the Random Forest model using the kitchen sink recipe had the lowest error, outperforming all other models. The Random Forest model using the kitchen sink recipe was then fitted to the entire training dataset -- this was the final model used for this project. 
+
+```{r}
+#| label: tbl-analysis
+#| tbl-cap: "RMSE Analysis for Model Selection"
+#| echo: false
+
+tbl_rmse
+```
+
+
+## Results
+
+@tbl-metrics shows the metric values used to assess the final model. The magnitude of errors between the model's predictions and the actual values is approximately 395.44 units, on average. The absolute difference between the model's predictions and the true values is approximately 303.96 units, on average. Around 48.65% of the variance in the target variable is accounted for by the model's predictions. The difference between the model's predictions and the actual values equates to approximately 10.02% of the actual values, on average.
+
+```{r}
+#| label: tbl-metrics
+#| tbl-cap: "Final Model Assessment Metrics"
+#| echo: false
+
+final_table
+```
+
+## Conclusion
+
+This regression problem, specifically prediction of the weight of the child at birth based on the mother's biological and psychological factors in pregnancy during a pandemic, was best predicted using a Random Forest Model using a kitchen sink recipe. This recipe was created from removing non-predictor variables, zero-variance variables, dummy encoding nominal variables, imputing missing variables using K Nearest Neighbor method, and normalizing all numeric data to have a standard deviation of one and a mean of zero. This final model had a satisfactory performance based on the context of the baby's birth weight data, but could be further improved with more variance and predictor variables in the dataset.
+
+## Evaluation
+
+This project aligns with broader efforts to enhance maternal and infant well-being by providing a model to predict birth weight of babies at birth to anticipate infant needs, such as NICU stay or incubators. The model performs moderately well to produce low errors in the predicted birth weights of babies compared to the actual data. However, since health data is crucial and must be accurate to provide appropriate care to patients, the model could be further improved for accuracy. Since the kitchen sink recipe worked better than the customized recipe, next steps of this project can involve further investigation of the context of the data, exploratory data analysis, thus creating recipes that feature more feature engineering to enhance the performance of the models. Furthermore, more extensive predictors with more variation on maternal biological and psychological health can be collected to be used to produce more accurate models to predict a baby's weight at birth. 
+
+## References
+
+Lebel, C., Tomfohr-Madsen, L., Giesbrecht, G., Lai, B. P. Y., Bagshawe, M., Freeman, M., Hapin, M. K., MacKinnon, A., Patel, P., van Sloten, M., & van de Wouw, M. (2023). Prenatal mental health data and birth outcomes in the pregnancy during the COVID-19 Pandemic dataset. Data in brief, 49, 109366. <https://doi.org/10.1016/j.dib.2023.109366>

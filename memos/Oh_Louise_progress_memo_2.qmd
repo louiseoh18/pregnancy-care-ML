@@ -1,0 +1,213 @@
+---
+title: "Progress Memo 2"
+subtitle: |
+  | Final Project 
+  | Data Science 2 with R (STAT 301-2)
+author: "Louise Oh"
+date: today
+
+format:
+  html:
+    toc: true
+    embed-resources: true
+    
+execute:
+  echo: false
+  warning: false
+  message: false
+
+from: markdown+emoji 
+reference-location: margin
+citation-location: margin
+---
+
+::: {.callout-tip icon=false}
+## Github Repo Link
+
+[https://github.com/stat301-2-2024-winter/final-project-2-louiseoh2025.git](https://github.com/stat301-2-2024-winter/final-project-2-louiseoh2025.git)
+
+:::
+
+```{r}
+#| label: load-all
+#| echo: false
+
+# load packages
+library(tidyverse)
+library(tidymodels)
+library(here)
+library(skimr)
+library(patchwork)
+# load data
+load(here("data/pregnancy_codebook.rda"))
+load(here("data/pregnancy_clean.rda"))
+load(here("data_splits/pregnancy_split.rda"))
+# load analysis
+load(here("analysis/model_analysis_parameters.rda"))
+load(here("analysis/model_analysis_rmse.rda"))
+load(here("analysis/assess_final_fit.rda"))
+```
+
+
+## Dataset Overview
+
+The Mental Health In Pregnancy During COVID-19 Dataset^[Mental Health In Pregnancy During COVID-19 --- [https://www.kaggle.com/datasets/yeganehbavafa/mental-health-in-the-pregnancy-during-the-covid-19](https://www.kaggle.com/datasets/yeganehbavafa/mental-health-in-the-pregnancy-during-the-covid-19)] is aimed to understand the impact of COVID-19-related stresses on pregnant individuals and their infants and collected survey-based data across Canada as part of the Pregnancy during the COVID-19 Pandemic (PdP) project. This survey-based data allows for insights that can inform targeted interventions and support strategies to address the impact of COVID-19-related stresses on maternal and infant health.
+
+::: {.callout-note icon="false"}
+## Prediction Research Objective 
+
+The goal is regression, specifically what the weight of the baby will be at birth based on the biological and psychological factors of mother and baby during a pandemic.
+
+:::
+
+## Target Variable
+
+The target variable is `birth_weight`. This is a numerical variable in the form of double. The histogram below shows a unimodal distribution that is slightly skewed toward the left, but still nearly symmetric. The distribution looks nearly normal with outliers on both ends, but slightly more on the lower end, of the weight distribution. The original data has a distribution closer to a normal distribution compared to when it is transformed in some way, so no transformation is necessary.
+
+## Data Splitting and Resampling
+
+The cleaned pregnancy data was split into training (80%) and testing (20%) datasets. The split was stratified by the target variable, `birth_weight`. There are 6078 observations in the cleaned dataset. There are 4861 observations in the training dataset. This is a relatively small dataset for machine learning. Therefore, repeated V-fold cross-validation with 10 folds and 5 repeats are performed on the training data. This provides a robust estimate of model performance as, each model will be trained and evaluated 50 times, covering various combinations of training and validation data. This is better than simply fitting and testing the models because it prevents overfitting and improves parameter and model accuracy by taking the uncertainty into account. See 1_*.R scripts for codes. 
+
+## Recipes
+
+There are two sets of recipes, 4 recipes in total. 
+
+The **first recipe** is a kitchen sink recipe created with the following steps: impute any missing values of variables with less than 20% missing data (step_impute_knn), filter out variables have have zero variance (step_zv), center and scale all predictors (step_normalize), add dummy variables all categorical predictors (step_dummy), and remove uniqueID and original date variable (step_rm). This is the most basic recipe similar to a kitchen sink recipe. The kitchen sink recipe for nonparametric/tree models are revised with one-hot encoded to dummy variables. 
+
+The **second recipe** is a more customized recipe with revised and additional steps after a simple EDA: add interaction terms between the anxiety and depression levels which were related to each other (step_interact; see @fig-appendix-eda1 for EDA), transform postnatal_depression for normal distribution (step_sqrt; @fig-appendix-eda2 for EDA). Similarly, the customized recipe for nonparametric/tree models are revised with one-hot encoded to dummy variables, and the interactions were removed since they do not affect tree-based models.
+
+@fig-appendix-eda1 shows the distribution of `postnatal_depression` variable in the original scale and the square-root transformed scale.
+```{r}
+#| label: fig-appendix-eda1
+#| fig-cap: "Postnatal Depression Level Distribution"
+#| echo: false
+
+a <- ggplot(pregnancy_train, aes(x = postnatal_depression)) +
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") +
+  theme_minimal() +
+  labs(title = "Original Scale",
+       x = "Postnatal Depression")
+b <- ggplot(pregnancy_train, aes(x = sqrt(postnatal_depression))) +
+  geom_histogram(bins = 30, fill = "skyblue", color = "black") +
+  theme_minimal() +
+  labs(title = "Square-Root Transformed",
+       x = "Postnatal Depression")
+(a + b)
+```
+
+@fig-appendix-eda2 shows a scatterplot to examine the relationship between the `postnatal_depression` and `promis_anxiety` variables.
+```{r}
+#| label: fig-appendix-eda2
+#| fig-cap: "Correlation Between Depression and Anxiety Variables"
+#| echo: false
+set.seed(100)
+ggplot(pregnancy_train, aes(x = postnatal_depression, y = promis_anxiety)) +
+  geom_jitter(alpha = 0.2) +
+  geom_smooth(method = "lm", se = FALSE, 
+              color = "red", linetype = 5) +
+  theme_minimal() +
+  labs(title = "Postnatal Depression vs. PROMIS Anxiety Levels",
+       x = "Postnatal Depression",
+       y = "PROMIS Anxiety")
+```
+
+All recipes were prepped and baked, and were fitted to the different models which seemed to work. See 2_*.R scripts for codes. 
+
+
+## Model Types
+
+A null model fitted using the kitchen sink recipe for parametric models is used as the baseline model. Six other models are created for the prediction problem: linear regression, lasso regression, ridge regression, k-nearest neighbor, boosted tree, and random forest. 
+
+**Null Model** (parsnip engine):
+
+- no tuning
+
+**Linear Regression** (lm engine):
+
+- no tuning
+
+**Elastic Net: Lasso Regression** (glmnet engine):
+
+-   mixture was set to 0
+
+-   penalty was explored over range with 5 levels
+
+**Elastic Net: Ridge Regression** (glmnet engine):
+
+-   mixture was set to 1
+
+-   penalty was explored over range with 5 levels
+
+**K Nearest Neighbor** (kknn engine):
+
+-   neighbors was explored over with 5 levels
+
+**Boosted Tree** (xgboost engine):
+
+-   number of randomly selected predictors to split on (mtry) was explored over with 42 levels
+
+-   minimum number of data points in a node for splitting (min_n) was explored over with 5 levels
+
+-   learning rate (learn_rate) was explored over with 10 levels
+
+**Random Forest** (ranger engine):
+
+-   number of trees was set to 1000
+
+-   number of randomly selected predictors to split on (mtry) was explored over with 42 levels
+
+-   minimum number of data points in a node for splitting (min_n) was explored over with 5 levels
+
+Each of the models are fitted using the two different recipes. Each recipe was modified for parametric and nonparametric models. All models seemed to run. See 3_*.R scripts for codes. 
+
+
+## Model Analysis 
+
+This prediction research objective is a regression problem. The RMSE (Root Mean Squared Error) will be used to compare and select the best model among the six models. Using RMSE is advantageous due to its interpretability and sensitivity to errors. Its ability to penalize large errors more heavily ensures a focus on reducing significant discrepancies in predictions. Its wide acceptance and differentiability make it suitable for optimization algorithms, facilitating model training. RMSE is also robust to outliers, which enhances the model's resilience to extreme values in the data. Ultimately, RMSE offers a straightforward and easily comparable measure of model performance, aiding in the selection of the most effective regression model.
+
+```{r}
+#| label: tbl-analysis
+#| tbl-cap: "Initial Model Analysis"
+#| echo: false
+tbl_rmse
+```
+
+@tbl-analysis shows the RMSE and its standard error for the baseline models and the 6 other models fitted/tuned using two distinct recipes, each customed for non-parametric and tree-based models. So far, the random forest model using the kitchen sink recipe seems to work best based on the lowest RMSE of 399.13 and its standard error. This is significantly better than the null model, which has an RMSE of 535.04. However, the customized recipe could be further refined since it has a little worse performance than the basic recipe and the baseline recipe. See 4_*.R scripts for codes. 
+
+## Final Model Assessment 
+
+A best model will be chosen, and this model will be fitted using the whole training dataset instead of the folds. Afterwards, analysis will be performed on the final model using RMSE, RSQ, MSE, and MAPE. The final model will be used to predict the baby's birth weight for this project.
+
+```{r}
+#| label: tbl-metrics
+#| tbl-cap: "Final Model Assessment Metrics"
+#| echo: false
+final_table
+```
+
+For now the random forest model using recipe 1 for tree-based models is the best model. @tbl-metrics shows the RMSE, RSQ, MAE, and MAPE of this final model fitted to the entire training dataset. 
+
+```{r}
+#| label: fig-assess
+#| fig-cap: "Final Model Actual vs. Predicted Data"
+#| echo: false
+final_plot
+```
+
+@fig-assess plots the birth weight predicted using the random forest model using recipe 1 for tree-based models by the actual birth weight. 
+
+These assessment tools will be used on the finalized models fitted using finalized recipes for the final report. See 5_*.R scripts for codes. 
+
+## Timeline
+
+So far, I feel good about my progress since I have a placeholder for all models and everything seems to run. I have to update some codes and edit the recipes for the final report. I need to keep in mind the run time of my random forest model (2-3 hours) if I want to try out different version of recipes. Below is a rough timeline to have my project completed on time. 
+
+- February 29: finalize the recipes and models, compare models
+- March 1: decide on final model and analyze its performance
+- March 3: write a draft of the final report and have any questions answered by Prof/TAs
+- March 5: write the executive summary and update github repo and README documents
+- March 6: proofread and submit final project
+
+## Concern & Question
+
+I explored many feature engineering functions to customize my recipe based on my EDA, but each time, the kitchen sink recipe provided me with better performances (lower RMSE) for most or all of the models. Would it be reasonable to conclude in my final report that my best performing model used my kitchen sink recipe? Does my customized recipe have to have better performance to prove that I have found a way to optimize the recipe based on my dataset?
