@@ -1,4 +1,4 @@
-## Overview
+## Improving Pregnancy Care During the Pandemic
 
 This project aims to properly develop a predictive model using supervised learning methods for Mental Health In Pregnancy During COVID-19^[Mental Health In Pregnancy During COVID-19 --- [https://www.kaggle.com/datasets/yeganehbavafa/mental-health-in-the-pregnancy-during-the-covid-19](https://www.kaggle.com/datasets/yeganehbavafa/mental-health-in-the-pregnancy-during-the-covid-19)], then properly apply machine/statistical learning methods to address it. The goal of this project is to predict the weight of the baby at birth based on the biological and psychological factors of mother and baby during a pandemic. There are two recipes used and six model types examined. 
 
